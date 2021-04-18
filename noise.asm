@@ -82,12 +82,19 @@ start:
 	sty VERA_L0_HSCROLL_H
 
 	; setup write to VRAM
-	lda #$10
+	ldx #$10
 	stz VERA_ADDR_L
-	sta VERA_ADDR_H
+	stx VERA_ADDR_H
 	sty VERA_CTRL
 	stz VERA_ADDR_L
-	sta VERA_ADDR_H
+	stx VERA_ADDR_H
+
+	; ensure a good starting state
+	sec
+	lda #$35
+	stz VERA_ADDR_M
+	stz VERA_DATA1
+	stz VERA_ADDR_L
 
 outloop:
 	; setup Vera addresses
@@ -95,9 +102,6 @@ outloop:
 	stz VERA_ADDR_M
 	stz VERA_CTRL
 	stz VERA_ADDR_M
-
-	clc
-	lda #$35
 
 	; init counter in x and start loop
 	ldx #<unrollloop
@@ -113,9 +117,7 @@ loopend:
 
 inloop:
 payload:
-	; This PRNG is based on my submission to cc65's rand()
-	; implementation, licenced under the zlib license
-	adc VERA_DATA0
+	sbc VERA_DATA0
 	sta VERA_DATA1
 payloadend:
 
@@ -131,7 +133,7 @@ payloaddest:
 
 	; Check for overrun when decompressing
 	!if payloadsize >= ($9F00 - payloaddest) {
-	    !error "Payload Too Large for LoRAM"
+		!error "Payload Too Large for LoRAM"
 	}
 	; The code is optimized assuming these constraints
 	!if (payloadreadaddr & $FF00) != (payloadwriteaddr & $FF00) {
